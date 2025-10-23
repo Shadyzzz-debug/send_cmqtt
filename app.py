@@ -1,16 +1,8 @@
-import os
-import streamlit as st
-from bokeh.models.widgets import Button
-from bokeh.models import CustomJS
-from streamlit_bokeh_events import streamlit_bokeh_events
-from PIL import Image
-import time
-import glob
 import paho.mqtt.client as paho
+import time
+import streamlit as st
 import json
-from gtts import gTTS
-from googletrans import Translator
-import platform # Importado para mostrar la versión de Python
+import platform
 
 # --- CSS PESADILLA GÓTICA (Referencia Bloodborne: Azul Oscuro, Bronce, Tinta y Sangre) ---
 base_css = """
@@ -141,12 +133,12 @@ def on_message(client, userdata, message):
 
 
 # --- Configuración de Conexión ---
-# Utilizando el broker IP provisto
 broker="157.230.214.127"
 port=1883
 client1= paho.Client("GIT-HUB")
 client1.on_message = on_message
-# Conectar al cliente una sola vez al inicio para evitar re-conexiones en cada llamada
+
+# Intentar la conexión al broker una sola vez para eficiencia
 try:
     client1.connect(broker,port)
     st.info(f"Conectado al Nexo Cósmico: **{broker}:{port}**")
@@ -169,13 +161,13 @@ st.markdown("---")
 # --- Control Binario (ON/OFF) ---
 st.markdown("### El Canto de las Runas Binarias (ON/OFF)")
 
-# Contenedor para botones en dos columnas
 col1, col2 = st.columns(2)
 
 with col1:
     if st.button('INVOCAR LUZ (ON)', key='on_button'):
         act1="ON"
         try:
+            client1.on_publish = on_publish 
             message = json.dumps({"Act1": act1})
             ret= client1.publish("cmqtt_s", message)
             st.success("La Runa de la Luz (ON) ha sido grabada.")
@@ -186,6 +178,7 @@ with col2:
     if st.button('DISIPAR SOMBRA (OFF)', key='off_button'):
         act1="OFF"
         try:
+            client1.on_publish = on_publish
             message = json.dumps({"Act1": act1})
             ret= client1.publish("cmqtt_s", message)
             st.success("La Runa de la Sombra (OFF) ha sido grabada.")
@@ -197,7 +190,6 @@ st.markdown("---")
 # --- Control Analógico (SLIDER) ---
 st.markdown("### El Dial de la Locura (Control Analógico)")
 
-# Usamos el estado de sesión para mantener el valor del slider
 st.session_state.analog_value = st.slider(
     'Selecciona el nivel de poder arcano (0.0 a 100.0):',
     0.0, 100.0, st.session_state.analog_value
@@ -207,7 +199,7 @@ st.markdown(f'**Nivel Arcano Seleccionado:** `{st.session_state.analog_value:.2f
 
 if st.button('GRABAR VALOR ANALÓGICO', key='analog_button'):
     try:
-        # Publicación del valor analógico
+        client1.on_publish = on_publish
         message = json.dumps({"Analog": float(st.session_state.analog_value)})
         ret= client1.publish("cmqtt_a", message)
         st.success(f"Valor Analógico ({st.session_state.analog_value:.2f}) transmitido al canal cósmico **'cmqtt_a'**.")
